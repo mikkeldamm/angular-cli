@@ -47,8 +47,12 @@ export function getStylesConfig(wco: WebpackConfigOptions) {
   const deployUrl = wco.buildOptions.deployUrl || '';
 
   const postcssPluginCreator = function() {
+    let postCssExtraPlugins = [autoprefixer()];
+    if (appConfig.postCssPlugins && appConfig.postCssPlugins.length > 0) {
+      postCssExtraPlugins = appConfig.postCssPlugins.map((pluginName: string) => require(pluginName)());
+    }
+
     return [
-      autoprefixer(),
       postcssUrl({
         url: (URL: string) => {
           // Only convert root relative URLs, which CSS-Loader won't process into require().
@@ -69,10 +73,10 @@ export function getStylesConfig(wco: WebpackConfigOptions) {
             return `/${baseHref}/${deployUrl}/${URL}`.replace(/\/\/+/g, '/');
           }
         }
-      })
-    ].concat(
-        minimizeCss ? [cssnano({ safe: true, autoprefixer: false })] : []
-    );
+      }),
+      ...postCssExtraPlugins,
+      ...(minimizeCss ? [cssnano({ safe: true, autoprefixer: false })] : [])
+    ];
   };
   (postcssPluginCreator as any)[postcssArgs] = {
     variableImports: {
